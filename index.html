@@ -2,120 +2,76 @@
 <html lang="pt-br">
 <head>
 <meta charset="utf-8">
-<title>Painel Dengue – Estados</title>
+<title>Dengue – Séries Temporais</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-:root{
-  --azul:#1e40af;
-  --azul-claro:#3b82f6;
-  --cinza:#f3f4f6;
-  --borda:#e5e7eb;
-  --texto:#111827;
-}
-
-*{
-  box-sizing:border-box;
-}
-
 body{
   margin:0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
-  background:var(--cinza);
-  color:var(--texto);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto;
+  background:#f4f4f5;
+  color:#111;
 }
-
 header{
-  background:linear-gradient(90deg,var(--azul),var(--azul-claro));
-  color:#fff;
   padding:14px 18px;
+  background:#ffffff;
+  border-bottom:1px solid #ddd;
 }
-
-header h2{
-  margin:0;
-  font-size:20px;
-}
-
 main{
-  display:grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap:16px;
-  padding:16px;
+  padding:18px;
+  max-width:1000px;
+  margin:auto;
 }
-
-.card{
-  background:#fff;
-  border-radius:10px;
-  padding:14px;
-  box-shadow:0 4px 12px rgba(0,0,0,.08);
+.controls{
+  display:flex;
+  gap:10px;
+  margin-bottom:14px;
+  flex-wrap:wrap;
 }
-
-.card h3{
-  margin:0 0 10px 0;
-  font-size:16px;
-  border-bottom:1px solid var(--borda);
-  padding-bottom:6px;
-}
-
 select{
   padding:6px 8px;
   font-size:14px;
-  margin-bottom:8px;
 }
-
-#map{
-  height:420px;
+.card{
+  background:#fff;
+  padding:14px;
   border-radius:8px;
-  border:1px solid var(--borda);
+  border:1px solid #e5e5e5;
 }
-
-#info{
-  margin-top:8px;
-  font-size:14px;
-  background:#f9fafb;
-  padding:6px 8px;
-  border-radius:6px;
-  border:1px solid var(--borda);
-}
-
-canvas{
-  max-height:420px;
-}
-
-@media(max-width:900px){
-  main{
-    grid-template-columns:1fr;
-  }
+h2{
+  margin:0;
+  font-size:18px;
 }
 </style>
-
 </head>
 
 <body>
 
 <header>
-  <h2>Painel Dengue – Estados (dados reais)</h2>
+  <h2>Dengue – séries temporais</h2>
 </header>
 
 <main>
-  <div class="card">
-    <h3>Mapa – ano <span id="anoTxt"></span></h3>
-    <select id="ano"></select>
-    <div id="map"></div>
-    <p id="info">Clique em um estado</p>
-  </div>
 
-  <div class="card">
-    <h3>Série temporal – Brasil</h3>
-    <canvas id="grafico"></canvas>
-  </div>
+<div class="controls">
+  <select id="tipo">
+    <option value="sexo">Sexo</option>
+    <option value="raca">Raça/cor</option>
+    <option value="escolaridade">Escolaridade</option>
+  </select>
+
+  <select id="categoria"></select>
+</div>
+
+<div class="card">
+  <canvas id="grafico"></canvas>
+</div>
+
 </main>
 
-<script src="app.js"></script>
+<script src="assets/app.js"></script>
 </body>
 </html>
