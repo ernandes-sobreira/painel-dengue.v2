@@ -2,11 +2,11 @@
 <html lang="pt-br">
 <head>
 <meta charset="utf-8">
-<title>Dengue – Brasil</title>
+<title>Dengue – Brasil (casos por ano)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 
 <style>
 body{
@@ -17,15 +17,11 @@ body{
 }
 header{
   padding:14px 20px;
-  background:#ffffff;
+  background:#fff;
   border-bottom:1px solid #ddd;
 }
-header h2{
-  margin:0;
-  font-size:20px;
-}
 main{
-  max-width:1000px;
+  max-width:900px;
   margin:auto;
   padding:20px;
 }
@@ -34,6 +30,14 @@ main{
   border:1px solid #ddd;
   border-radius:8px;
   padding:16px;
+}
+#error{
+  margin-top:10px;
+  padding:10px;
+  background:#fee;
+  border:1px solid #f99;
+  color:#900;
+  display:none;
 }
 </style>
 </head>
@@ -46,10 +50,97 @@ main{
 
 <main>
   <div class="card">
-    <canvas id="graficoBrasil"></canvas>
+    <canvas id="grafico"></canvas>
+    <div id="error"></div>
   </div>
 </main>
 
-<script src="assets/app.js"></script>
+<script>
+const errorBox = document.getElementById("error");
+function showError(msg){
+  errorBox.style.display = "block";
+  errorBox.innerHTML = msg;
+  console.error(msg);
+}
+
+fetch("dados-dengue-estados.csv")
+  .then(r => r.text())
+  .then(txt => {
+
+    const linhas = txt.split(/\\r?\\n/);
+
+    // 👉 acha a linha que tem vários anos (padrão SINAN)
+    const inicio = linhas.findIndex(l => {
+      const anos = l.match(/;20\\d{2}/g);
+      return anos && anos.length >= 3;
+    });
+
+    if(inicio === -1){
+      showError("Não encontrei o cabeçalho com os anos no CSV.");
+      return;
+    }
+
+    const csvLimpo = linhas.slice(inicio).join("\\n");
+
+    const dados = Papa.parse(csvLimpo, {
+      delimiter: ";",
+      header: true,
+      skipEmptyLines: true
+    }).data;
+
+    if(!dados || dados.length === 0){
+      showError("CSV lido, mas sem dados.");
+      return;
+    }
+
+    // primeira coluna = UF
+    const colUF = Object.keys(dados[0])[0];
+
+    const total = dados.find(d =>
+      d[colUF] && d[colUF].toString().toLowerCase().includes("total")
+    );
+
+    if(!total){
+      showError("Linha 'Total' não encontrada.");
+      return;
+    }
+
+    const anos = Object.keys(total).filter(a => /^\\d{4}$/.test(a));
+    if(anos.length === 0){
+      showError("Nenhuma coluna de ano encontrada.");
+      return;
+    }
+
+    const valores = anos.map(a => {
+      const v = total[a];
+      return v ? Number(v.replace(/\\./g,"")) : 0;
+    });
+
+    new Chart(document.getElementById("grafico"),{
+      type:"line",
+      data:{
+        labels:anos,
+        datasets:[{
+          label:"Brasil – casos de dengue",
+          data:valores,
+          borderColor:"#333",
+          backgroundColor:"rgba(0,0,0,.08)",
+          tension:0.3,
+          pointRadius:3
+        }]
+      },
+      options:{
+        responsive:true,
+        scales:{
+          y:{
+            ticks:{ callback:v => v.toLocaleString() }
+          }
+        }
+      }
+    });
+  })
+  .catch(e => showError("Erro ao carregar o CSV: " + e.message));
+</script>
+
 </body>
 </html>
