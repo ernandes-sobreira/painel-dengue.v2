@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="utf-8">
-<title>Dengue – Séries Temporais</title>
+<title>Dengue – Brasil</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -12,7 +12,7 @@
 body{
   margin:0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto;
-  background:#f3f3f3;
+  background:#f4f4f4;
   color:#111;
 }
 header{
@@ -20,56 +20,34 @@ header{
   background:#ffffff;
   border-bottom:1px solid #ddd;
 }
+header h2{
+  margin:0;
+  font-size:20px;
+}
 main{
-  max-width:1100px;
+  max-width:1000px;
   margin:auto;
   padding:20px;
 }
-.controls{
-  display:flex;
-  gap:10px;
-  margin-bottom:14px;
-  flex-wrap:wrap;
-}
-select{
-  padding:6px 8px;
-  font-size:14px;
-}
 .card{
   background:#fff;
-  padding:16px;
-  border-radius:8px;
   border:1px solid #ddd;
+  border-radius:8px;
+  padding:16px;
 }
-h2{margin:0}
 </style>
 </head>
 
 <body>
 
 <header>
-  <h2>Dengue – séries temporais anuais</h2>
+  <h2>Dengue – Brasil (casos totais por ano)</h2>
 </header>
 
 <main>
-
-<div class="controls">
-  <select id="dimensao">
-    <option value="total">Total Brasil</option>
-    <option value="estados">UF</option>
-    <option value="municipios">Município</option>
-    <option value="sexo">Sexo</option>
-    <option value="raca">Raça/cor</option>
-    <option value="escolaridade">Escolaridade</option>
-  </select>
-
-  <select id="categoria"></select>
-</div>
-
-<div class="card">
-  <canvas id="grafico"></canvas>
-</div>
-
+  <div class="card">
+    <canvas id="graficoBrasil"></canvas>
+  </div>
 </main>
 
 <script src="assets/app.js"></script>
