@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="utf-8">
-<title>Dengue – Brasil (casos por ano)</title>
+<title>Dengue – Brasil</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -38,6 +38,8 @@ main{
   border:1px solid #f99;
   color:#900;
   display:none;
+  white-space:pre-wrap;
+  font-size:13px;
 }
 </style>
 </head>
@@ -57,63 +59,58 @@ main{
 
 <script>
 const errorBox = document.getElementById("error");
-function showError(msg){
+function erro(msg){
   errorBox.style.display = "block";
-  errorBox.innerHTML = msg;
+  errorBox.textContent = msg;
   console.error(msg);
 }
 
-fetch("dados-dengue-estados.csv")
-  .then(r => r.text())
-  .then(txt => {
+Papa.parse("dados-dengue-estados.csv",{
+  download: true,
+  header: true,
+  skipEmptyLines: true,
+  delimiter: "", // ← deixa o Papa descobrir
+  complete: function(res){
 
-    const linhas = txt.split(/\\r?\\n/);
-
-    // 👉 acha a linha que tem vários anos (padrão SINAN)
-    const inicio = linhas.findIndex(l => {
-      const anos = l.match(/;20\\d{2}/g);
-      return anos && anos.length >= 3;
-    });
-
-    if(inicio === -1){
-      showError("Não encontrei o cabeçalho com os anos no CSV.");
+    if(!res.data || res.data.length === 0){
+      erro("CSV lido, mas sem dados.");
       return;
     }
 
-    const csvLimpo = linhas.slice(inicio).join("\\n");
-
-    const dados = Papa.parse(csvLimpo, {
-      delimiter: ";",
-      header: true,
-      skipEmptyLines: true
-    }).data;
-
-    if(!dados || dados.length === 0){
-      showError("CSV lido, mas sem dados.");
-      return;
-    }
+    // mostra as colunas encontradas (diagnóstico)
+    console.log("Colunas:", Object.keys(res.data[0]));
 
     // primeira coluna = UF
-    const colUF = Object.keys(dados[0])[0];
+    const colUF = Object.keys(res.data[0])[0];
 
-    const total = dados.find(d =>
-      d[colUF] && d[colUF].toString().toLowerCase().includes("total")
+    // tenta achar TOTAL
+    const total = res.data.find(r =>
+      r[colUF] && r[colUF].toString().toLowerCase().includes("total")
     );
 
     if(!total){
-      showError("Linha 'Total' não encontrada.");
+      erro(
+        "Não encontrei a linha TOTAL.\n\n" +
+        "Primeiras linhas encontradas:\n\n" +
+        JSON.stringify(res.data.slice(0,5), null, 2)
+      );
       return;
     }
 
-    const anos = Object.keys(total).filter(a => /^\\d{4}$/.test(a));
+    // anos = colunas numéricas
+    const anos = Object.keys(total).filter(c => /^\d{4}$/.test(c));
+
     if(anos.length === 0){
-      showError("Nenhuma coluna de ano encontrada.");
+      erro(
+        "Linha TOTAL encontrada, mas não achei colunas de ano.\n\n" +
+        JSON.stringify(total, null, 2)
+      );
       return;
     }
 
     const valores = anos.map(a => {
       const v = total[a];
-      return v ? Number(v.replace(/\\./g,"")) : 0;
+      return v ? Number(v.replace(/\./g,"")) : 0;
     });
 
     new Chart(document.getElementById("grafico"),{
@@ -138,8 +135,11 @@ fetch("dados-dengue-estados.csv")
         }
       }
     });
-  })
-  .catch(e => showError("Erro ao carregar o CSV: " + e.message));
+  },
+  error: function(err){
+    erro("Erro ao ler CSV: " + err);
+  }
+});
 </script>
 
 </body>
