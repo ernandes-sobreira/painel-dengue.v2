@@ -10,15 +10,40 @@ let chart;
 let dados = [];
 let anos = [];
 
+/* ===============================
+   LIMPA CSV SINAN (ROBUSTO)
+================================ */
 function limparCabecalho(txt){
-  const linhas = txt.split("\n");
-  const i = linhas.findIndex(l => l.includes(";201"));
-  return linhas.slice(i).join("\n");
+  const linhas = txt.split(/\r?\n/);
+
+  const idx = linhas.findIndex(l =>
+    l.startsWith("UF de residência") ||
+    l.startsWith("Município de residência") ||
+    l.startsWith("Ano notificação")
+  );
+
+  if(idx === -1){
+    console.error("Cabeçalho não encontrado");
+    return "";
+  }
+
+  return linhas.slice(idx).join("\n");
 }
 
+/* ===============================
+   CONVERSÃO SEGURA DE NÚMEROS
+================================ */
+function num(v){
+  if(!v) return 0;
+  return Number(v.replace(/\./g,"").replace(",", ".")) || 0;
+}
+
+/* ===============================
+   CARREGAMENTO PRINCIPAL
+================================ */
 function carregar(dimensao){
   if(dimensao === "total"){
-    carregarTotal();
+    carregarTotalBrasil();
     return;
   }
 
@@ -26,50 +51,85 @@ function carregar(dimensao){
     .then(r=>r.text())
     .then(txt=>{
       const csv = limparCabecalho(txt);
-      dados = Papa.parse(csv,{delimiter:";",header:true}).data;
+      dados = Papa.parse(csv,{
+        delimiter:";",
+        header:true,
+        skipEmptyLines:true
+      }).data;
 
-      anos = Object.keys(dados[0]).filter(a=>/^\d{4}$/.test(a));
+      dados = dados.filter(d => d && Object.values(d).some(v => v));
 
-      montarCategorias(Object.keys(dados[0])[0]);
+      if(dimensao === "estados" || dimensao === "municipios"){
+        anos = Object.keys(dados[0]).filter(a=>/^\d{4}$/.test(a));
+        montarCategorias(Object.keys(dados[0])[0]);
+      } else {
+        anos = dados.map(d => d["Ano notificação"]);
+        montarCategorias("colunas");
+      }
     });
 }
 
-function carregarTotal(){
+/* ===============================
+   TOTAL BRASIL
+================================ */
+function carregarTotalBrasil(){
   fetch(arquivos.estados)
     .then(r=>r.text())
     .then(txt=>{
       const csv = limparCabecalho(txt);
       const rows = Papa.parse(csv,{delimiter:";",header:true}).data;
-      const total = rows.find(r=>r[Object.keys(r)[0]]==="Total");
+      const total = rows.find(r => r["UF de residência"] === "Total");
 
       anos = Object.keys(total).filter(a=>/^\d{4}$/.test(a));
-      desenhar("Brasil", anos.map(a=>Number(total[a].replace(/\./g,""))));
+      desenhar("Brasil", anos.map(a => num(total[a])));
+      document.getElementById("categoria").innerHTML = "";
     });
 }
 
-function montarCategorias(coluna){
+/* ===============================
+   CATEGORIAS
+================================ */
+function montarCategorias(tipo){
   const sel = document.getElementById("categoria");
   sel.innerHTML = "";
 
-  dados.forEach(r=>{
-    const o=document.createElement("option");
-    o.value=r[coluna];
-    o.textContent=r[coluna];
-    sel.appendChild(o);
-  });
-
-  atualizar(coluna, sel.value);
+  if(tipo === "colunas"){
+    const cols = Object.keys(dados[0]).filter(c => c !== "Ano notificação");
+    cols.forEach(c=>{
+      const o=document.createElement("option");
+      o.value=c;
+      o.textContent=c;
+      sel.appendChild(o);
+    });
+    atualizarColuna(cols[0]);
+  } else {
+    dados.forEach(r=>{
+      const o=document.createElement("option");
+      o.value=r[tipo];
+      o.textContent=r[tipo];
+      sel.appendChild(o);
+    });
+    atualizarLinha(tipo, sel.value);
+  }
 }
 
-function atualizar(coluna, categoria){
-  const linha = dados.find(r=>r[coluna]===categoria);
-  const valores = anos.map(a=>{
-    const v=linha[a];
-    return v ? Number(v.replace(/\./g,"")) : 0;
-  });
-  desenhar(categoria, valores);
+/* ===============================
+   ATUALIZAÇÕES
+================================ */
+function atualizarLinha(coluna, valor){
+  const linha = dados.find(d => d[coluna] === valor);
+  const valores = anos.map(a => num(linha[a]));
+  desenhar(valor, valores);
 }
 
+function atualizarColuna(coluna){
+  const valores = dados.map(d => num(d[coluna]));
+  desenhar(coluna, valores);
+}
+
+/* ===============================
+   DESENHO DO GRÁFICO
+================================ */
 function desenhar(label, valores){
   if(chart) chart.destroy();
 
@@ -95,13 +155,23 @@ function desenhar(label, valores){
   });
 }
 
-document.getElementById("dimensao").onchange=e=>{
+/* ===============================
+   EVENTOS
+================================ */
+document.getElementById("dimensao").onchange = e=>{
   carregar(e.target.value);
 };
 
-document.getElementById("categoria").onchange=e=>{
-  const coluna = Object.keys(dados[0])[0];
-  atualizar(coluna, e.target.value);
+document.getElementById("categoria").onchange = e=>{
+  const dim = document.getElementById("dimensao").value;
+  if(dim === "estados" || dim === "municipios"){
+    atualizarLinha(Object.keys(dados[0])[0], e.target.value);
+  } else {
+    atualizarColuna(e.target.value);
+  }
 };
 
+/* ===============================
+   INICIAL
+================================ */
 carregar("total");
