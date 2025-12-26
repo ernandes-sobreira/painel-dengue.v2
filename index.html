@@ -1,184 +1,45 @@
 <!doctype html>
 <html lang="pt-br">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Painel Dengue v2</title>
-  <meta name="theme-color" content="#0b4aa2"/>
-  <link rel="preconnect" href="https://unpkg.com"/>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-  <link rel="stylesheet" href="assets/style.css"/>
+<meta charset="utf-8">
+<title>Painel Dengue – Estados</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{margin:0;font-family:Arial;background:#f4f6f8}
+header{background:#1e40af;color:#fff;padding:10px}
+main{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
+#map{height:420px}
+.card{background:#fff;padding:10px;border-radius:6px}
+@media(max-width:800px){main{grid-template-columns:1fr}}
+</style>
 </head>
+
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">🦟</div>
-      <div>
-        <div class="title">painel-dengue.v2</div>
-        <div class="subtitle">Mapa + séries temporais (SINAN) • rápido, limpo e objetivo</div>
-      </div>
-    </div>
 
-    <div class="top-actions">
-      <button id="btnAbout" class="btn ghost">Sobre</button>
-      <button id="btnReset" class="btn">Reset</button>
-    </div>
-  </header>
+<header>
+  <h2>Painel Dengue – Estados (dados reais)</h2>
+</header>
 
-  <main class="layout">
-    <aside class="panel">
-      <div class="section">
-        <div class="section-title">Mapa</div>
+<main>
+  <div class="card">
+    <h3>Mapa – ano <span id="anoTxt"></span></h3>
+    <select id="ano"></select>
+    <div id="map"></div>
+    <p id="info">Clique em um estado</p>
+  </div>
 
-        <label class="lbl">Nível</label>
-        <div class="segmented" role="tablist" aria-label="Nível do mapa">
-          <button class="seg on" id="levelUF" aria-selected="true">Estados</button>
-          <button class="seg" id="levelMUN" aria-selected="false">Municípios (por UF)</button>
-        </div>
+  <div class="card">
+    <h3>Série temporal – Brasil</h3>
+    <canvas id="grafico"></canvas>
+  </div>
+</main>
 
-        <label class="lbl">Ano</label>
-        <select id="yearSel" class="select"></select>
-
-        <label class="lbl">UF</label>
-        <select id="ufSel" class="select" disabled></select>
-
-        <div class="hint">
-          Dica: no modo Municípios, selecione uma UF. O mapa carrega o GeoJSON do estado escolhido.
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">Séries temporais</div>
-
-        <label class="lbl">Visão</label>
-        <select id="seriesSel" class="select">
-          <option value="total">Total Brasil</option>
-          <option value="sexo">Sexo</option>
-          <option value="raca">Raça/cor</option>
-          <option value="escolaridade">Escolaridade</option>
-        </select>
-
-        <label class="lbl">Filtro (categoria)</label>
-        <select id="catSel" class="select"></select>
-
-        <div class="hint">
-          O gráfico mostra casos prováveis por ano. Para mapas, usamos UF/Município por ano.
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">Sazonalidade (mês)</div>
-        <label class="lbl">Faixa etária</label>
-        <select id="ageSel" class="select"></select>
-
-        <div class="hint">
-          Este bloco usa o arquivo “faixa etária” em formato mensal (agregado). Se você tiver a versão por ano, dá pra
-          transformar em série temporal também.
-        </div>
-      </div>
-
-      <div class="section mini">
-        <div class="kpis">
-          <div class="kpi">
-            <div class="kpi-label">Ano</div>
-            <div class="kpi-val" id="kpiYear">—</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-label">Selecionado</div>
-            <div class="kpi-val" id="kpiPlace">Brasil</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-label">Casos</div>
-            <div class="kpi-val" id="kpiCases">—</div>
-          </div>
-        </div>
-        <div class="smallprint">
-          Fonte: Ministério da Saúde/SVSA – SINAN (exportado). Veja os arquivos em <code>/data</code>.
-        </div>
-      </div>
-    </aside>
-
-    <section class="content">
-      <div class="grid">
-        <div class="card mapcard">
-          <div class="card-head">
-            <div>
-              <div class="card-title">Mapa (Leaflet)</div>
-              <div class="card-sub" id="mapSub">Estados • casos prováveis no ano selecionado</div>
-            </div>
-            <div class="chip" id="mapChip">Pronto</div>
-          </div>
-          <div id="map" class="map"></div>
-          <div class="legend" id="legend"></div>
-        </div>
-
-        <div class="card">
-          <div class="card-head">
-            <div>
-              <div class="card-title">Série temporal</div>
-              <div class="card-sub" id="seriesSub">Brasil • casos por ano</div>
-            </div>
-            <div class="chip" id="seriesChip">—</div>
-          </div>
-          <div class="chartWrap">
-            <canvas id="chartSeries" height="140"></canvas>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-head">
-            <div>
-              <div class="card-title">Sazonalidade (mês)</div>
-              <div class="card-sub" id="seasonSub">Faixa etária selecionada</div>
-            </div>
-            <div class="chip" id="seasonChip">—</div>
-          </div>
-          <div class="chartWrap">
-            <canvas id="chartSeason" height="140"></canvas>
-          </div>
-        </div>
-
-        <div class="card insights">
-          <div class="card-head">
-            <div>
-              <div class="card-title">Texto automático</div>
-              <div class="card-sub">Para policy makers: curto e direto</div>
-            </div>
-            <div class="chip" id="insightsChip">—</div>
-          </div>
-          <div id="insights" class="insightsBody">
-            <div class="muted">Selecione um ano e clique em um estado/município no mapa para gerar o resumo.</div>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <dialog id="aboutDlg" class="dlg">
-    <div class="dlgHead">
-      <div class="dlgTitle">Sobre o painel</div>
-      <button id="btnCloseAbout" class="btn ghost">Fechar</button>
-    </div>
-    <div class="dlgBody">
-      <p>
-        Este painel foi feito para ser <b>leve</b> e <b>didático</b>:
-        mapa (Leaflet) + gráficos (Chart.js) + leitura direta dos CSVs.
-      </p>
-      <ul>
-        <li>Mapa de <b>UF</b> (Brasil) ou <b>Municípios</b> por UF (carregamento sob demanda).</li>
-        <li>Séries temporais: total Brasil, sexo, raça/cor e escolaridade.</li>
-        <li>Sazonalidade mensal por faixa etária (arquivo agregado).</li>
-      </ul>
-      <p class="muted">
-        GeoJSON: estados (geodata-br-states) e municípios por UF (geodata-br). Você pode trocar as URLs no <code>assets/app.js</code>.
-      </p>
-    </div>
-  </dialog>
-
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="assets/app.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
